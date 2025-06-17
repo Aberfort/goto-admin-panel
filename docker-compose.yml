@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  app:
+    image: jenniferbrowngreen5/laravel_app:latest
+    restart: unless-stopped
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    env_file:
+      - /root/goto-secrets/backend/.env
+    networks:
+      - app-network
+    depends_on:
+      - db
+      - redis
+      - mailpit
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    env_file:
+      - /root/goto-secrets/backend/.env
+    volumes:
+      - /root/goto-volumes/dbdata:/var/lib/mysql
+    networks:
+      - app-network
+
+  react_app:
+    image: node:20
+    working_dir: /usr/src/app
+    volumes:
+      - ./frontend:/usr/src/app
+    env_file:
+      - /root/goto-secrets/frontend/.env
+    command: sh -c "npm install && npm run build && npx serve -s build"
+    networks:
+      - app-network
+
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./backend:/var/www/html
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+      - react_app
+    networks:
+      - app-network
+      - external-network
+
+  redis:
+    image: redis:6-alpine
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    networks:
+      - app-network
+
+volumes:
+  dbdata:
+    driver: local
+    driver_opts:
+      type: none
+      device: /root/goto-volumes/dbdata
+      o: bind
+
+networks:
+  app-network:
+    driver: bridge
+  external-network:
+    driver: bridge
