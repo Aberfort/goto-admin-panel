@@ -1,16 +1,14 @@
-import React, { useContext } from 'react';
-import { AuthContext } from '../contexts/AuthContext';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { AppBar, Toolbar, Typography, Button, Chip } from '@mui/material';
 import { toast } from 'react-toastify';
-import {
-    AppBar,
-    Toolbar,
-    Typography,
-    Button,
-} from '@mui/material';
+import { useAuth } from '../contexts/useAuth';
 
-function Navbar() {
-    const { user, logout, loading } = useContext(AuthContext);
+interface NavbarProps {
+    registrationEnabled: boolean;
+}
+
+function Navbar({ registrationEnabled }: NavbarProps) {
+    const { user, logout, loading } = useAuth();
     const navigate = useNavigate();
 
     const handleLogout = async () => {
@@ -18,7 +16,7 @@ function Navbar() {
             await logout();
             toast.success('Вихід успішний!');
             navigate('/login');
-        } catch (error) {
+        } catch {
             toast.error('Помилка при виході.');
         }
     };
@@ -26,14 +24,27 @@ function Navbar() {
     return (
         <AppBar position="static">
             <Toolbar>
-                <Typography variant="h6" component={RouterLink} to="/" sx={{ flexGrow: 1, color: 'inherit', textDecoration: 'none' }}>
-                    GoTo
+                <Typography
+                    variant="h6"
+                    component={RouterLink}
+                    to="/"
+                    sx={{ flexGrow: 1, color: 'inherit', textDecoration: 'none' }}
+                >
+                    LinkFleet
                 </Typography>
 
                 {loading ? (
                     <Typography variant="body1">Завантаження...</Typography>
                 ) : user ? (
                     <>
+                        {user.is_demo && (
+                            <Chip
+                                label="Демо (лише читання)"
+                                color="warning"
+                                size="small"
+                                sx={{ mr: 2 }}
+                            />
+                        )}
                         <Typography variant="body1" sx={{ mr: 2 }}>
                             Привіт, {user.name}!
                         </Typography>
@@ -46,6 +57,11 @@ function Navbar() {
                         <Button color="inherit" component={RouterLink} to="/login">
                             Вхід
                         </Button>
+                        {registrationEnabled && (
+                            <Button color="inherit" component={RouterLink} to="/register">
+                                Реєстрація
+                            </Button>
+                        )}
                     </>
                 )}
             </Toolbar>

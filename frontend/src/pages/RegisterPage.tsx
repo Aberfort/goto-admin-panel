@@ -1,48 +1,41 @@
-import React, { useContext } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { AuthContext } from '../contexts/AuthContext';
-import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import {
-    Container,
-    TextField,
-    Button,
-    Typography,
-} from '@mui/material';
+import { Container, TextField, Button, Typography } from '@mui/material';
+import { useAuth } from '../contexts/useAuth';
+import { validationErrors } from '../api/errors';
 
-function Register() {
-    const { register } = useContext(AuthContext);
+interface FormValues {
+    name: string;
+    email: string;
+    password: string;
+    password_confirmation: string;
+}
+
+const initialValues: FormValues = { name: '', email: '', password: '', password_confirmation: '' };
+
+const validationSchema = Yup.object({
+    name: Yup.string().required("Ім'я є обов'язковим"),
+    email: Yup.string().email('Невірний формат Email').required("Email є обов'язковим"),
+    password: Yup.string().min(8, 'Пароль має містити щонайменше 8 символів').required("Пароль є обов'язковим"),
+    password_confirmation: Yup.string()
+        .oneOf([Yup.ref('password')], 'Паролі повинні співпадати')
+        .required("Підтвердження пароля є обов'язковим"),
+});
+
+function RegisterPage() {
+    const { register } = useAuth();
     const navigate = useNavigate();
 
-    const initialValues = {
-        name: '',
-        email: '',
-        password: '',
-        password_confirmation: '',
-    };
-
-    const validationSchema = Yup.object({
-        name: Yup.string().required("Ім'я є обов'язковим"),
-        email: Yup.string().email('Невірний формат Email').required("Email є обов'язковим"),
-        password: Yup.string().min(8, 'Пароль має містити щонайменше 8 символів').required("Пароль є обов'язковим"),
-        password_confirmation: Yup.string()
-            .oneOf([Yup.ref('password'), null], 'Паролі повинні співпадати')
-            .required("Підтвердження пароля є обов'язковим"),
-    });
-
-    const onSubmit = async (values, { setSubmitting, setErrors }) => {
+    const onSubmit = async (
+        values: FormValues,
+        { setSubmitting, setErrors }: { setSubmitting: (v: boolean) => void; setErrors: (e: Record<string, string>) => void }
+    ) => {
         try {
             await register(values);
             navigate('/login');
         } catch (error) {
-            if (error.response && error.response.status === 422) {
-                const validationErrors = error.response.data.errors;
-                toast.error('Помилки валідації.');
-                setErrors(validationErrors);
-            } else {
-                toast.error('Помилка при реєстрації.');
-            }
+            setErrors(validationErrors(error));
             setSubmitting(false);
         }
     };
@@ -52,11 +45,7 @@ function Register() {
             <Typography variant="h4" gutterBottom>
                 Реєстрація
             </Typography>
-            <Formik
-                initialValues={initialValues}
-                validationSchema={validationSchema}
-                onSubmit={onSubmit}
-            >
+            <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onSubmit}>
                 {({ isSubmitting, errors, handleChange, touched, values }) => (
                     <Form>
                         <TextField
@@ -123,4 +112,4 @@ function Register() {
     );
 }
 
-export default Register;
+export default RegisterPage;

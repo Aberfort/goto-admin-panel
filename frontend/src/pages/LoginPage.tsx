@@ -1,42 +1,35 @@
-import React, { useContext } from 'react';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
-import { AuthContext } from '../contexts/AuthContext';
-import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import {
-    Container,
-    TextField,
-    Button,
-    Typography,
-} from '@mui/material';
+import { Container, TextField, Button, Typography } from '@mui/material';
+import { useAuth } from '../contexts/useAuth';
+import { validationErrors } from '../api/errors';
 
-function Login() {
-    const { login } = useContext(AuthContext);
+interface FormValues {
+    email: string;
+    password: string;
+}
+
+const initialValues: FormValues = { email: '', password: '' };
+
+const validationSchema = Yup.object({
+    email: Yup.string().email('Невірний формат Email').required("Email є обов'язковим"),
+    password: Yup.string().required("Пароль є обов'язковим"),
+});
+
+function LoginPage() {
+    const { login } = useAuth();
     const navigate = useNavigate();
 
-    const initialValues = {
-        email: '',
-        password: '',
-    };
-
-    const validationSchema = Yup.object({
-        email: Yup.string().email('Невірний формат Email').required("Email є обов'язковим"),
-        password: Yup.string().required("Пароль є обов'язковим"),
-    });
-
-    const onSubmit = async (values, { setSubmitting, setErrors }) => {
+    const onSubmit = async (
+        values: FormValues,
+        { setSubmitting, setErrors }: { setSubmitting: (v: boolean) => void; setErrors: (e: Record<string, string>) => void }
+    ) => {
         try {
             await login(values);
             navigate('/');
         } catch (error) {
-            if (error.response && error.response.status === 422) {
-                const validationErrors = error.response.data.errors;
-                toast.error('Невірні дані для входу.');
-                setErrors(validationErrors);
-            } else {
-                toast.error('Помилка при вході.');
-            }
+            setErrors(validationErrors(error));
             setSubmitting(false);
         }
     };
@@ -46,11 +39,7 @@ function Login() {
             <Typography variant="h4" gutterBottom>
                 Вхід
             </Typography>
-            <Formik
-                initialValues={initialValues}
-                validationSchema={validationSchema}
-                onSubmit={onSubmit}
-            >
+            <Formik initialValues={initialValues} validationSchema={validationSchema} onSubmit={onSubmit}>
                 {({ isSubmitting, errors, handleChange, touched, values }) => (
                     <Form>
                         <TextField
@@ -94,4 +83,4 @@ function Login() {
     );
 }
 
-export default Login;
+export default LoginPage;

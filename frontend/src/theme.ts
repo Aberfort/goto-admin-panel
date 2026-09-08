@@ -10,6 +10,18 @@ const theme = createTheme({
             main: '#dc004e',
         },
     },
+    shape: {
+        borderRadius: 8,
+    },
+    components: {
+        MuiButton: {
+            styleOverrides: {
+                root: {
+                    textTransform: 'none',
+                },
+            },
+        },
+    },
 });
 
 export default theme;
