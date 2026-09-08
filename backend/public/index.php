@@ -3,6 +3,13 @@
 use Illuminate\Contracts\Http\Kernel;
 use Illuminate\Http\Request;
 
+// Never let raw PHP errors/warnings/deprecations (e.g. from newer PHP
+// versions deprecating constants old dependencies still use) leak into the
+// HTTP response body — this runs before Laravel's own exception handler is
+// registered, so without this a stray notice corrupts every JSON response.
+// Laravel's own debug error pages are unaffected; they render separately.
+ini_set('display_errors', '0');
+
 define('LARAVEL_START', microtime(true));
 
 /*

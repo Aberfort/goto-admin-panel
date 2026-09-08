@@ -19,7 +19,10 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['http://localhost:3000', 'http://165.22.204.62:8080', 'http://localhost:8080', '188.166.49.57:8080'],
+    'allowed_origins' => array_filter(array_map('trim', explode(',', env(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:3000,http://localhost:8080'
+    )))),
 
     'allowed_origins_patterns' => [],
 

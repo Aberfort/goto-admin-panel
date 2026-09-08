@@ -1,0 +1,40 @@
+# Railway deploy image for the Laravel backend.
+# Unlike backend/Dockerfile (php-fpm, meant to sit behind the nginx
+# container from docker-compose), this image serves HTTP itself on
+# Railway's $PORT, since a Railway service is a single container with
+# no separate reverse proxy in front of it.
+FROM php:8.2-cli
+
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpng-dev \
+    libjpeg62-turbo-dev \
+    libfreetype6-dev \
+    libonig-dev \
+    libzip-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    git \
+    curl \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+COPY . /var/www/html
+
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
+
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
+
+COPY docker/railway-start.sh /usr/local/bin/railway-start.sh
+RUN chmod +x /usr/local/bin/railway-start.sh
+
+EXPOSE 8080
+
+CMD ["railway-start.sh"]

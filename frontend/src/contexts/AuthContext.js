@@ -30,7 +30,6 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (credentials) => {
         try {
-            await api.get('/sanctum/csrf-cookie');
             const response = await api.post('/api/login', credentials);
             setUser(response.data.user);
             setToken(response.data.token);

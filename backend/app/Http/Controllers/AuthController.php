@@ -6,7 +6,6 @@ use Illuminate\Http\Request;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
@@ -47,22 +46,20 @@ class AuthController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        $user = User::where('email', $credentials['email'])->first();
 
-            $user = Auth::user();
-
-            $token = $user->createToken('API Token')->plainTextToken;
-
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json([
-                'user' => $user,
-                'token' => $token,
-            ], 200);
+                'message' => 'Невірні облікові дані.'
+            ], 401);
         }
 
+        $token = $user->createToken('API Token')->plainTextToken;
+
         return response()->json([
-            'message' => 'Невірні облікові дані.'
-        ], 401);
+            'user' => $user,
+            'token' => $token,
+        ], 200);
     }
 
     /**
@@ -70,15 +67,8 @@ class AuthController extends Controller
      */
     public function logout(Request $request)
     {
-        Log::info('Logout request received.');
-
         try {
-            Auth::guard('web')->logout(); // Вийти з guard 'web'
-
-            $request->session()->invalidate(); // Інвалідувати сесію
-            $request->session()->regenerateToken(); // Згенерувати новий CSRF токен
-
-            Log::info('User logged out successfully.');
+            $request->user()->currentAccessToken()->delete();
 
             return response()->json(['message' => 'Ви успішно вийшли.'], 200);
         } catch (\Exception $e) {
