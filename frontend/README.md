@@ -1,63 +1,67 @@
+# LinkFleet — Frontend
 
-# Frontend - React
+React 18 + TypeScript SPA, built with Vite. See the [root README](../README.md) for the overall architecture.
 
-Цей проект є фронтенд частиною додатку, створений з використанням React та Material-UI. Він забезпечує UI для взаємодії з бекендом, дозволяючи користувачам автентифікуватися, керувати вебсайтами та генерувати API-токени.
+## Requirements
 
+- Node.js >= 20
 
-## Особливості
-
-**Форми Входу та Реєстрації з валідацією.**
-
-**Управління Вебсайтами:** Додавання, редагування, видалення.
-
-**Інтеграція з Бекендом:** Використання Axios для запитів до API.
-
-**Material-UI Дизайн:** Сучасний інтерфейс, адаптивна верстка.
-
-**Нотифікації:** Використання react-toastify для відображення успішних та помилкових повідомлень.
-
-## Вимоги
-
-**Node.js** >= 14.x
-
-**npm або yarn**
-
-**Git**
-
-## Установка та Запуск
-
-### Вхід до директорії
+## Setup
 
 ```bash
-cd goto-admin-panel/frontend
-```
-
-### Встановлення Залежностей
-
-```bash
+cp .env.example .env   # VITE_API_URL=http://localhost:8000 (empty = same-origin)
 npm install
+npm run dev
 ```
 
-### Запуск Проекту
+Open http://localhost:3000. Needs the backend running (see [`backend/README.md`](../backend/README.md)).
+
+## Scripts
+
+| | |
+|---|---|
+| `npm run dev` | Dev server with HMR |
+| `npm run build` | Type-check + production build to `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run typecheck` | `tsc -b --noEmit` |
+| `npm run lint` | ESLint |
+| `npm run test` | Vitest (watch mode) — use `npx vitest run` for a single pass |
+
+## Structure
+
+```
+src/
+  api/          Typed axios wrappers, one file per backend resource
+                (client.ts holds the shared axios instance)
+  contexts/     AuthContext - bearer token in localStorage, exposes user.is_demo
+  pages/        One file per route (SitesPage, SiteLinksPage, LinkFormPage,
+                AnalyticsDashboardPage, LoginPage, RegisterPage)
+  components/   Shared UI (currently just Navbar)
+  types/        Shared TypeScript interfaces, mirroring the backend's API shapes
+```
+
+`AnalyticsDashboardPage` (and its `@mui/x-charts` dependency, the single heaviest
+package in the app) is lazy-loaded via `React.lazy` — see `App.tsx` — so it's
+not in everyone's initial bundle.
+
+## Auth
+
+Bearer token in `localStorage`, sent as `Authorization: Bearer <token>` on every
+request (`api/client.ts` + `AuthContext`). No cookies, no CSRF token dance —
+matches the backend's stateless Sanctum setup.
+
+`user.is_demo` (surfaced by `AuthContext`) drives read-only UI gating in
+`SitesPage`/`SiteLinksPage` — hidden/disabled create/edit/delete controls, plus
+an explanatory `Alert`. This is a UX nicety only; the actual enforcement is
+server-side (see the backend README).
+
+## Tests
 
 ```bash
-npm start
+npx vitest run
 ```
-Проект буде доступний за адресою http://localhost:3000
-## Структура Проекту
 
-    src/:
-
-        components/: Основні компоненти (Login, Register, WebsiteList, AddWebsite, EditWebsite, Navbar).
-
-        contexts/: Файли контексту React (AuthContext.js).
-
-        services/: api.js - інстанс Axios.
-
-        theme/: Файл theme.js з налаштуванням Material-UI теми.
-
-        App.js: Головний компонент додатку.
-
-        index.js: Точка входу.
-
-    public/: Статичні файли.
+Vitest + Testing Library, mocking the `api/*` modules directly rather than the
+HTTP layer. Covers `AuthContext`'s login/logout state transitions, `LoginPage`
+validation and submit flow, and `SitesPage`/`SiteLinksPage` listing, creation,
+toggling, and demo-readonly gating.

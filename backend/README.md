@@ -1,176 +1,79 @@
+# LinkFleet — Backend
 
-# Backend - Laravel
+Laravel 12 API: multi-tenant Sites/Links, the `/r/{code}` redirect endpoint, and click analytics. See the [root README](../README.md) for the overall architecture.
 
-Цей проект є бекенд частиною додатку, реалізованою на фреймворку Laravel. Він надає RESTful API для керування вебсайтами та обробки автентифікації користувачів через Laravel Sanctum.
+## Requirements
 
+- PHP >= 8.2
+- Composer
+- SQLite (zero setup, recommended for local dev) or MySQL
 
-
-
-## Особливості
-**Авторизація та Аутентифікація:** Реєстрація, вхід та вихід користувачів з використанням Laravel Sanctum.
-
-**CRUD Операції для Вебсайтів:** Створення, перегляд, оновлення та видалення вебсайтів.
-
-**Генерація API Токенів:** Можливість перегенерувати API токен для кожного вебсайту.
-
-**Захищені Маршрути:** Маршрути, що вимагають аутентифікації через Sanctum.
-## Вимоги
-**PHP** >= 8.0
-
-**Composer**
-
-**MySQL** або інша підтримувана база даних
-
-**Git** Маршрути, що вимагають аутентифікації через Sanctum.
-
-Рекомендовано використовувати **Docker** для швидкого розгортання, але не обов'язково.
-## Установка та Налаштування
-
-### Клонування Репозиторію
-
-```bash
-git clone git@git.sharkscode.com:serhiiv/goto-admin-panel.git
-cd goto-admin-panel/backend
-```
-
-### Встановлення Залежностей
-
-```bash
-composer install
-```
-
-### Налаштування Файлу .env
-
-Створіть копію з .env.example
+## Setup
 
 ```bash
 cp .env.example .env
-```
-
-Відкрийте .env та налаштуйте:
-
-```bash
-APP_NAME=Laravel
-APP_ENV=local
-APP_KEY=
-APP_DEBUG=true
-APP_URL=http://localhost:8080
-
-LOG_CHANNEL=stack
-LOG_DEPRECATIONS_CHANNEL=null
-LOG_LEVEL=debug
-
-DB_CONNECTION=mysql
-DB_HOST=db
-DB_PORT=3306
-DB_DATABASE=your_database_name
-DB_USERNAME=your_database_user
-DB_PASSWORD=your_database_password
-
-BROADCAST_DRIVER=log
-CACHE_DRIVER=file
-FILESYSTEM_DISK=local
-QUEUE_CONNECTION=sync
-SESSION_DRIVER=file
-SESSION_LIFETIME=120
-SANCTUM_STATEFUL_DOMAINS=localhost:8080,localhost:3000
-SESSION_DOMAIN=localhost
-SESSION_SECURE_COOKIE=true
-
-MEMCACHED_HOST=redis
-
-REDIS_HOST=redis
-REDIS_PASSWORD=null
-REDIS_PORT=6379
-
-MAIL_MAILER=smtp
-MAIL_HOST=mailpit
-MAIL_PORT=1025
-MAIL_USERNAME=null
-MAIL_PASSWORD=null
-MAIL_ENCRYPTION=null
-MAIL_FROM_ADDRESS="hello@example.com"
-MAIL_FROM_NAME="${APP_NAME}"
-
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AWS_DEFAULT_REGION=us-east-1
-AWS_BUCKET=
-AWS_USE_PATH_STYLE_ENDPOINT=false
-
-PUSHER_APP_ID=
-PUSHER_APP_KEY=
-PUSHER_APP_SECRET=
-PUSHER_HOST=
-PUSHER_PORT=443
-PUSHER_SCHEME=https
-PUSHER_APP_CLUSTER=mt1
-
-VITE_APP_NAME="${APP_NAME}"
-VITE_PUSHER_APP_KEY="${PUSHER_APP_KEY}"
-VITE_PUSHER_HOST="${PUSHER_HOST}"
-VITE_PUSHER_PORT="${PUSHER_PORT}"
-VITE_PUSHER_SCHEME="${PUSHER_SCHEME}"
-VITE_PUSHER_APP_CLUSTER="${PUSHER_APP_CLUSTER}"
-```
-
-### Генерація Ключа Додатку
-
-```bash
+composer install
 php artisan key:generate
-```
-
-### Міграції
-
-```bash
-php artisan migrate
-```
-
-### Запуск Проекту
-
-```bash
+touch database/database.sqlite   # only if using the default sqlite connection
+php artisan migrate --seed
 php artisan serve
 ```
 
-Проект буде доступний за адресою http://localhost:8080
+The API is now at `http://localhost:8000`. Seeding creates a read-only demo account (`demo@linkfleet.app` / `demo12345`, see [`DemoUserSeeder`](database/seeders/DemoUserSeeder.php)) plus a couple of sample sites/links/clicks so there's something to look at (see [`DemoDataSeeder`](database/seeders/DemoDataSeeder.php)). Both seeders are idempotent — safe to re-run.
 
-## Структура Проекту
+To use MySQL instead, uncomment the `DB_*` block in `.env.example` (matches `docker-compose.yml`).
 
-**app/:** Логіка додатку (Моделі, Контролери, Сервіси).
+## Auth model
 
-**config/:** Конфігураційні файли.
+Sanctum bearer tokens, fully stateless — no session cookies, no CSRF dance. `POST /api/login` / `/api/register` return a token; send it as `Authorization: Bearer <token>` on everything else.
 
-**database/:** Міграції, сидери, фабрики.
+Ownership is enforced by [Policies](app/Policies) (`SitePolicy`, `LinkPolicy`), not ad-hoc controller checks — a user can only ever see/edit/delete their own sites and links. Demo-account read-only enforcement is a single [`Gate::before()`](app/Providers/AppServiceProvider.php) hook, so it applies uniformly regardless of resource type.
 
-**routes/:** Маршрути web.php та api.php.
+## API
 
-**resources/:** В’юхи (якщо є), Blade-шаблони.
+| Method | Path | Auth | |
+|---|---|---|---|
+| POST | `/api/register` | — | Gated by `REGISTRATION_ENABLED` |
+| POST | `/api/login` | — | |
+| POST | `/api/logout` | ✓ | |
+| GET | `/api/user` | ✓ | |
+| GET | `/api/config` | — | `{ registration_enabled }` |
+| GET/POST | `/api/sites` | ✓ | |
+| GET/PUT/DELETE | `/api/sites/{site}` | ✓ | |
+| GET/POST | `/api/sites/{site}/links` | ✓ | |
+| GET/PUT/DELETE | `/api/links/{link}` | ✓ | |
+| PATCH | `/api/links/{link}/toggle` | ✓ | flips `is_active` |
+| GET | `/api/sites/{site}/analytics` | ✓ | rolled up across all its links |
+| GET | `/api/links/{link}/analytics` | ✓ | single link |
+| GET | `/r/{code}` | — | the actual redirect (302 + click logging) |
 
-**tests/:** Тести.
+## Tests
 
-**public/:** Точка входу (index.php).
-## Робота з API
+```bash
+vendor/bin/phpunit
+```
 
-### Перевірка API:
+38 Feature/Unit tests — auth flow, ownership boundaries (cross-user 403s, demo-account write blocks), the redirect+click-logging path, analytics aggregation. `phpunit.xml` runs against an in-memory SQLite database, so no service container/setup needed.
 
-Реєстрація: POST /api/register
+```bash
+vendor/bin/pint          # check code style
+vendor/bin/pint --dirty  # fix it
+```
 
-Вхід: POST /api/login
+## Structure
 
-Вихід: POST /api/logout
-
-Поточний Користувач: GET /api/user
-
-### CRUD для Вебсайтів (автентифікація потрібна):
-
-Список: GET /api/websites
-
-Створення: POST /api/websites
-
-Перегляд: GET /api/websites/{id}
-
-Оновлення: PUT /api/websites/{id}
-
-Видалення: DELETE /api/websites/{id}
-
-Перегенерація Токену: POST /api/websites/{id}/regenerate-token
+```
+app/
+  Actions/          RecordLinkClick - the redirect endpoint's core logic
+  Http/Controllers/
+  Http/Requests/     Validation + authorization (FormRequest::authorize())
+  Models/            User, Site, Link, Click
+  Policies/          Ownership checks
+  Support/           UserAgentParser, ClientIp - small, framework-agnostic helpers
+database/
+  migrations/
+  seeders/           DemoUserSeeder, DemoDataSeeder (idempotent, run on every deploy)
+routes/
+  api.php            JSON API, auth:sanctum-protected where noted above
+  web.php            Just the /r/{code} redirect - a real browser navigation, not JSON
+```
