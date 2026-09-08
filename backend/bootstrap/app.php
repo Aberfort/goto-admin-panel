@@ -24,4 +24,11 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (AuthenticationException $e, $request) {
             return response()->json(['message' => 'Неавтентифікований'], 401);
         });
+
+        // Every api/* route is JSON-only - always render errors as JSON
+        // there, regardless of what Accept/X-Requested-With headers (or
+        // their absence) a client happens to send.
+        $exceptions->shouldRenderJsonWhen(function ($request, $e) {
+            return $request->is('api/*') || $request->expectsJson();
+        });
     })->create();

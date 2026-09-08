@@ -15,10 +15,12 @@ use Illuminate\Support\Carbon;
  */
 class DemoDataSeeder extends Seeder
 {
+    // Just the host, matching what RecordLinkClick actually stores for
+    // real traffic (see App\Actions\RecordLinkClick::referrerHost).
     private const REFERRERS = [
-        'https://twitter.com/',
-        'https://www.google.com/',
-        'https://www.facebook.com/',
+        'twitter.com',
+        'www.google.com',
+        'www.facebook.com',
         null, // direct traffic
     ];
 

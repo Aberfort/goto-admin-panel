@@ -1,18 +1,13 @@
 <?php
 
+use App\Http\Controllers\RedirectController;
 use Illuminate\Support\Facades\Route;
-
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
-|
-*/
 
 Route::get('/', function () {
     return response()->json(['name' => config('app.name'), 'status' => 'ok']);
 });
+
+// A real browser navigation returning an HTTP redirect - not a JSON API
+// call, so this lives outside the api/ prefix and its JSON-oriented
+// exception handling.
+Route::get('/r/{code}', [RedirectController::class, 'go'])->name('links.redirect');

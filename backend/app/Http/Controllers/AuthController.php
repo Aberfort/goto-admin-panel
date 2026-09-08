@@ -14,6 +14,12 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        if (! config('features.registration_enabled')) {
+            return response()->json([
+                'message' => 'Реєстрація тимчасово вимкнена.',
+            ], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
