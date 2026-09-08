@@ -1,18 +1,18 @@
 # Railway deploy image for the React frontend.
-# CRA inlines REACT_APP_* variables at build time, so REACT_APP_API_URL
-# (the backend's public Railway URL) must be passed as a build ARG.
+# Vite inlines VITE_* variables at build time, so VITE_API_URL (the
+# backend's public Railway URL) must be passed as a build ARG.
 FROM node:20 AS builder
 WORKDIR /usr/src/app
 COPY package*.json ./
-RUN npm install
+RUN npm ci
 COPY . .
-ARG REACT_APP_API_URL
-ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 FROM node:20-slim
 RUN npm install -g serve
 WORKDIR /app
-COPY --from=builder /usr/src/app/build ./build
+COPY --from=builder /usr/src/app/dist ./dist
 EXPOSE 3000
-CMD ["sh", "-c", "serve -s build -l ${PORT:-3000}"]
+CMD ["sh", "-c", "serve -s dist -l ${PORT:-3000}"]
