@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import api from '../api/client';
 import * as authApi from '../api/auth';
@@ -21,24 +21,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [loading, setLoading] = useState(true);
     const [token, setToken] = useState<string>(() => localStorage.getItem('token') || '');
 
-    const fetchUser = useCallback(async () => {
+    // Keeps every request's default Authorization header in sync with the
+    // current token - not just the bootstrap fetch below, but also the
+    // token login()/register() set directly from their own response.
+    useEffect(() => {
         if (token) {
-            try {
-                api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-                const currentUser = await authApi.fetchUser();
-                setUser(currentUser);
-            } catch {
+            api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        } else {
+            delete api.defaults.headers.common['Authorization'];
+        }
+    }, [token]);
+
+    // Runs once, to rehydrate from a token already in localStorage on page
+    // load. login()/register() already receive the fresh user object in
+    // their own response, so re-running this on every token change would
+    // just be a redundant duplicate request.
+    useEffect(() => {
+        const storedToken = localStorage.getItem('token');
+        if (!storedToken) {
+            setLoading(false);
+            return;
+        }
+
+        authApi
+            .fetchUser()
+            .then(setUser)
+            .catch(() => {
                 setUser(null);
                 setToken('');
                 localStorage.removeItem('token');
-            }
-        }
-        setLoading(false);
-    }, [token]);
-
-    useEffect(() => {
-        fetchUser();
-    }, [fetchUser]);
+            })
+            .finally(() => setLoading(false));
+    }, []);
 
     const login = async (credentials: LoginPayload) => {
         try {
