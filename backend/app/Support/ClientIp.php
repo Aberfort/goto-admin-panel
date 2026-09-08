@@ -11,6 +11,15 @@ namespace App\Support;
  */
 class ClientIp
 {
+    /**
+     * $secret defaults to null so Laravel's container can still
+     * auto-resolve this class with no explicit binding - only reads
+     * config('app.key') lazily, on first actual use, rather than at
+     * construction time. Tests pass an explicit secret instead, so this
+     * class never needs a booted app to be unit-tested.
+     */
+    public function __construct(private readonly ?string $secret = null) {}
+
     public function truncateAndHash(?string $ip): ?string
     {
         if (empty($ip)) {
@@ -23,7 +32,7 @@ class ClientIp
             return null;
         }
 
-        return hash_hmac('sha256', $truncated, (string) config('app.key'));
+        return hash_hmac('sha256', $truncated, $this->secret ?? (string) config('app.key'));
     }
 
     private function truncate(string $ip): ?string
