@@ -1,7 +1,10 @@
-# Використовуємо PHP 8.2
-FROM php:8.2-fpm
+# Railway deploy image for the Laravel backend.
+# Unlike Dockerfile.fpm (php-fpm, meant to sit behind the nginx
+# container from docker-compose), this image serves HTTP itself on
+# Railway's $PORT, since a Railway service is a single container with
+# no separate reverse proxy in front of it.
+FROM php:8.2-cli
 
-# Встановлюємо системні залежності та PHP-розширення
 RUN apt-get update && apt-get install -y \
     build-essential \
     libpng-dev \
@@ -18,24 +21,20 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Встановлюємо Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Встановлюємо робочу директорію
 WORKDIR /var/www/html
 
-# Копіюємо весь проєкт
 COPY . /var/www/html
 
-# Встановлюємо залежності Laravel
-RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader --no-dev
 
-# Надаємо права на директорії storage та bootstrap/cache
-RUN chown -R www-data:www-data storage bootstrap/cache
+RUN mkdir -p storage/framework/{sessions,views,cache} storage/logs bootstrap/cache \
+    && chown -R www-data:www-data storage bootstrap/cache
 
-# Експонуємо порт
-EXPOSE 9000
+COPY docker/railway-start.sh /usr/local/bin/railway-start.sh
+RUN chmod +x /usr/local/bin/railway-start.sh
 
-# Запускаємо PHP-FPM
-CMD ["php-fpm"]
+EXPOSE 8080
 
+CMD ["railway-start.sh"]
