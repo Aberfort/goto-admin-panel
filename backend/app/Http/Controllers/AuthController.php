@@ -2,10 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
@@ -42,7 +41,7 @@ class AuthController extends Controller
     public function login(Request $request)
     {
         $credentials = $request->validate([
-            'email' => ['required','email'],
+            'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
 
@@ -50,7 +49,7 @@ class AuthController extends Controller
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json([
-                'message' => 'Невірні облікові дані.'
+                'message' => 'Невірні облікові дані.',
             ], 401);
         }
 
@@ -72,7 +71,8 @@ class AuthController extends Controller
 
             return response()->json(['message' => 'Ви успішно вийшли.'], 200);
         } catch (\Exception $e) {
-            Log::error('Error during logout: ' . $e->getMessage());
+            Log::error('Error during logout: '.$e->getMessage());
+
             return response()->json(['message' => 'Помилка при виході.'], 500);
         }
     }
