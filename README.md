@@ -1,5 +1,8 @@
 # LinkFleet
 
+[![CI](https://github.com/Aberfort/linkfleet/actions/workflows/ci.yml/badge.svg)](https://github.com/Aberfort/linkfleet/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A self-hosted redirect-link manager with click analytics — group your links by site, get a short `/r/{code}` URL for each one, and see who's clicking from where.
 
 **Live demo:** https://frontend-production-34c4.up.railway.app
