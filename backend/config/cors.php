@@ -32,6 +32,8 @@ return [
 
     'max_age' => 0,
 
-    'supports_credentials' => true,
+    // Bearer-token auth only, no cookies cross the wire, so no need to
+    // opt in to credentialed CORS requests.
+    'supports_credentials' => false,
 
 ];
