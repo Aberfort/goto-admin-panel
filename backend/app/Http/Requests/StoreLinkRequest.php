@@ -22,6 +22,8 @@ class StoreLinkRequest extends FormRequest
             'target_url' => ['required', 'url', 'max:2048'],
             // Empty/omitted -> Link::boot() auto-generates one.
             'short_code' => ['nullable', 'string', 'max:64', 'alpha_dash', Rule::unique('links')],
+            'expires_at' => ['nullable', 'date', 'after:now'],
+            'password' => ['nullable', 'string', 'min:4', 'max:255'],
         ];
     }
 }

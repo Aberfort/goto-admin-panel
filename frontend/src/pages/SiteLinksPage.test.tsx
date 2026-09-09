@@ -30,6 +30,8 @@ const link: Link = {
     target_url: 'https://example.com/promo',
     is_active: true,
     clicks_count: 42,
+    expires_at: null,
+    has_password: false,
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z',
 };
@@ -94,5 +96,44 @@ describe('SiteLinksPage', () => {
 
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
         expect(screen.getByText('Активне', { selector: 'span' })).toBeInTheDocument();
+    });
+
+    it('opens a QR dialog pointing at the public QR endpoint', async () => {
+        vi.mocked(linksApi.listLinks).mockResolvedValue([link]);
+
+        renderPage();
+        await screen.findByText('/r/promo');
+
+        await userEvent.click(screen.getByRole('button', { name: 'QR-код' }));
+
+        const image = await screen.findByAltText('QR-код для /r/promo');
+        expect(image).toHaveAttribute('src', expect.stringContaining('/qr/promo.svg'));
+    });
+
+    it('uploads a chosen CSV file and refreshes the list', async () => {
+        vi.mocked(linksApi.listLinks).mockResolvedValue([link]);
+        vi.mocked(linksApi.importLinks).mockResolvedValue({ imported: 2, skipped: [] });
+
+        renderPage();
+        await screen.findByText('/r/promo');
+
+        const file = new File(['target_url\nhttps://example.com/x\n'], 'links.csv', { type: 'text/csv' });
+        await userEvent.upload(screen.getByTestId('import-input'), file);
+
+        await waitFor(() => expect(linksApi.importLinks).toHaveBeenCalledWith(1, file));
+        // The list is re-fetched so freshly imported links show up.
+        await waitFor(() => expect(linksApi.listLinks).toHaveBeenCalledTimes(2));
+    });
+
+    it('marks a password-protected, expired link in the table', async () => {
+        vi.mocked(linksApi.listLinks).mockResolvedValue([
+            { ...link, has_password: true, expires_at: '2020-01-01T00:00:00Z' },
+        ]);
+
+        renderPage();
+        await screen.findByText('/r/promo');
+
+        expect(await screen.findByLabelText('Захищене паролем')).toBeInTheDocument();
+        expect(screen.getByLabelText(/Термін дії минув/)).toBeInTheDocument();
     });
 });

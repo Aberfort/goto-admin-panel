@@ -18,6 +18,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'user']);
 
     Route::apiResource('sites', SiteController::class);
+    Route::post('/sites/{site}/links/import', [LinkController::class, 'import']);
     Route::apiResource('sites.links', LinkController::class)->shallow();
     Route::patch('/links/{link}/toggle', [LinkController::class, 'toggle']);
 

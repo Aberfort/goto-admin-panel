@@ -3,23 +3,60 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Formik, Form } from 'formik';
 import * as Yup from 'yup';
 import { toast } from 'react-toastify';
-import { Container, TextField, Button, Typography, Box, Alert } from '@mui/material';
+import {
+    Container,
+    TextField,
+    Button,
+    Typography,
+    Box,
+    Alert,
+    FormControlLabel,
+    Checkbox,
+    Divider,
+} from '@mui/material';
 import { getLink, createLink, updateLink } from '../api/links';
 import { errorMessage, validationErrors } from '../api/errors';
+import type { CreateLinkPayload, UpdateLinkPayload } from '../api/links';
 
 interface FormValues {
     target_url: string;
     short_code: string;
+    /** datetime-local format: YYYY-MM-DDTHH:mm */
+    expires_at: string;
+    password: string;
+    removePassword: boolean;
 }
 
-const emptyValues: FormValues = { target_url: '', short_code: '' };
+const emptyValues: FormValues = {
+    target_url: '',
+    short_code: '',
+    expires_at: '',
+    password: '',
+    removePassword: false,
+};
 
 const validationSchema = Yup.object({
     target_url: Yup.string().url('Введіть повний URL, напр. https://example.com').required("URL є обов'язковим"),
     short_code: Yup.string()
         .matches(/^[a-zA-Z0-9_-]*$/, 'Лише латинські літери, цифри, "-" та "_"')
         .max(64),
+    password: Yup.string().min(4, 'Щонайменше 4 символи').max(255),
 });
+
+/** ISO timestamp -> the YYYY-MM-DDTHH:mm a datetime-local input expects. */
+function toLocalInput(iso: string | null): string {
+    if (!iso) {
+        return '';
+    }
+    const date = new Date(iso);
+    const offsetMs = date.getTimezoneOffset() * 60_000;
+
+    return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
+}
+
+function toIso(local: string): string | null {
+    return local ? new Date(local).toISOString() : null;
+}
 
 function LinkFormPage() {
     const { siteId, linkId } = useParams<{ siteId?: string; linkId?: string }>();
@@ -28,6 +65,7 @@ function LinkFormPage() {
 
     const [initialValues, setInitialValues] = useState<FormValues>(emptyValues);
     const [loading, setLoading] = useState(isEditing);
+    const [hasPassword, setHasPassword] = useState(false);
     const [ownerSiteId, setOwnerSiteId] = useState<number | null>(siteId ? Number(siteId) : null);
 
     useEffect(() => {
@@ -36,7 +74,13 @@ function LinkFormPage() {
         }
         getLink(Number(linkId))
             .then((link) => {
-                setInitialValues({ target_url: link.target_url, short_code: link.short_code });
+                setInitialValues({
+                    ...emptyValues,
+                    target_url: link.target_url,
+                    short_code: link.short_code,
+                    expires_at: toLocalInput(link.expires_at),
+                });
+                setHasPassword(link.has_password);
                 setOwnerSiteId(link.site_id);
             })
             .catch((error) => {
@@ -52,13 +96,30 @@ function LinkFormPage() {
     ) => {
         try {
             if (isEditing && linkId) {
-                await updateLink(Number(linkId), { target_url: values.target_url });
+                const payload: UpdateLinkPayload = {
+                    target_url: values.target_url,
+                    expires_at: toIso(values.expires_at),
+                };
+                // Omitted key = leave the existing password alone; '' = remove it.
+                if (values.removePassword) {
+                    payload.password = '';
+                } else if (values.password) {
+                    payload.password = values.password;
+                }
+
+                await updateLink(Number(linkId), payload);
                 toast.success('Посилання оновлено.');
             } else if (siteId) {
-                await createLink(Number(siteId), {
+                const payload: CreateLinkPayload = {
                     target_url: values.target_url,
                     short_code: values.short_code || undefined,
-                });
+                    expires_at: toIso(values.expires_at),
+                };
+                if (values.password) {
+                    payload.password = values.password;
+                }
+
+                await createLink(Number(siteId), payload);
                 toast.success('Посилання додано.');
             }
             navigate(`/sites/${ownerSiteId ?? siteId}/links`);
@@ -78,7 +139,7 @@ function LinkFormPage() {
     }
 
     return (
-        <Container maxWidth="sm" sx={{ mt: 4 }}>
+        <Container maxWidth="sm" sx={{ mt: 4, mb: 6 }}>
             <Typography variant="h4" gutterBottom>
                 {isEditing ? 'Редагувати посилання' : 'Додати посилання'}
             </Typography>
@@ -129,12 +190,58 @@ function LinkFormPage() {
                             </Alert>
                         )}
 
+                        <Divider sx={{ my: 3 }}>Обмеження доступу</Divider>
+
+                        <TextField
+                            fullWidth
+                            margin="normal"
+                            type="datetime-local"
+                            label="Діє до (необов'язково)"
+                            name="expires_at"
+                            value={values.expires_at}
+                            onChange={handleChange}
+                            slotProps={{ inputLabel: { shrink: true } }}
+                            helperText="Після цього моменту посилання поверне 410 замість переходу. Порожнє — діє безстроково."
+                        />
+
+                        <TextField
+                            fullWidth
+                            margin="normal"
+                            type="password"
+                            label={hasPassword ? 'Новий пароль' : "Пароль (необов'язково)"}
+                            name="password"
+                            autoComplete="new-password"
+                            value={values.password}
+                            onChange={handleChange}
+                            disabled={values.removePassword}
+                            error={touched.password && Boolean(errors.password)}
+                            helperText={
+                                (touched.password && errors.password) ||
+                                (hasPassword
+                                    ? 'Пароль уже встановлено. Введіть новий, щоб змінити, або лишіть порожнім — залишиться поточний.'
+                                    : 'Перед переходом відвідувач має ввести цей пароль.')
+                            }
+                        />
+
+                        {hasPassword && (
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        name="removePassword"
+                                        checked={values.removePassword}
+                                        onChange={handleChange}
+                                    />
+                                }
+                                label="Прибрати пароль — зробити посилання відкритим"
+                            />
+                        )}
+
                         <Button
                             variant="contained"
                             color="primary"
                             type="submit"
                             disabled={isSubmitting}
-                            sx={{ mt: 2 }}
+                            sx={{ mt: 3 }}
                             fullWidth
                         >
                             Зберегти

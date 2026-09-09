@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\QrCodeController;
 use App\Http\Controllers\RedirectController;
 use Illuminate\Support\Facades\Route;
 
@@ -11,3 +12,10 @@ Route::get('/', function () {
 // call, so this lives outside the api/ prefix and its JSON-oriented
 // exception handling.
 Route::get('/r/{code}', [RedirectController::class, 'go'])->name('links.redirect');
+Route::post('/r/{code}', [RedirectController::class, 'unlock'])->name('links.unlock');
+
+// Public so the QR can be used directly as an <img src>. Throttled
+// because, unlike the redirect, each hit does real rendering work.
+Route::get('/qr/{code}.svg', [QrCodeController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('links.qr');

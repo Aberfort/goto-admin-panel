@@ -23,8 +23,17 @@ export interface Link {
     target_url: string;
     is_active: boolean;
     clicks_count: number;
+    /** ISO timestamp, or null when the link never expires. */
+    expires_at: string | null;
+    /** The hash itself never leaves the server — this is all the UI gets. */
+    has_password: boolean;
     created_at: string;
     updated_at: string;
+}
+
+export interface ImportResult {
+    imported: number;
+    skipped: Array<{ row: number; reason: string }>;
 }
 
 export interface TimeseriesPoint {

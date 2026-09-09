@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useParams } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import {
@@ -20,18 +20,35 @@ import {
     Link,
     Breadcrumbs,
     Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    Stack,
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import BarChartIcon from '@mui/icons-material/BarChart';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import LockIcon from '@mui/icons-material/Lock';
+import ScheduleIcon from '@mui/icons-material/Schedule';
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { useAuth } from '../contexts/useAuth';
 import { getSite } from '../api/sites';
-import { listLinks, deleteLink, toggleLink } from '../api/links';
+import { listLinks, deleteLink, toggleLink, importLinks } from '../api/links';
 import { errorMessage } from '../api/errors';
 import type { Site, Link as LinkType } from '../types';
 
 const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
+
+function isExpired(link: LinkType): boolean {
+    return link.expires_at !== null && new Date(link.expires_at) < new Date();
+}
+
+function formatDate(iso: string): string {
+    return new Date(iso).toLocaleString('uk-UA', { dateStyle: 'short', timeStyle: 'short' });
+}
 
 function SiteLinksPage() {
     const { siteId } = useParams<{ siteId: string }>();
@@ -39,6 +56,8 @@ function SiteLinksPage() {
     const [site, setSite] = useState<Site | null>(null);
     const [links, setLinks] = useState<LinkType[]>([]);
     const [loading, setLoading] = useState(true);
+    const [qrLink, setQrLink] = useState<LinkType | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     const isDemo = Boolean(user?.is_demo);
     const id = Number(siteId);
@@ -91,8 +110,36 @@ function SiteLinksPage() {
         }
     };
 
+    const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        // Reset immediately so picking the same file twice still fires onChange.
+        event.target.value = '';
+
+        if (!file) {
+            return;
+        }
+
+        try {
+            const result = await importLinks(id, file);
+            if (result.imported > 0) {
+                toast.success(`Імпортовано посилань: ${result.imported}.`);
+            }
+            if (result.skipped.length > 0) {
+                toast.warn(
+                    `Пропущено рядків: ${result.skipped.length}. Перший — рядок ${result.skipped[0].row}: ${result.skipped[0].reason}`
+                );
+            }
+            if (result.imported === 0 && result.skipped.length === 0) {
+                toast.info('У файлі не знайшлося рядків для імпорту.');
+            }
+            await fetchData();
+        } catch (error) {
+            toast.error(errorMessage(error, 'Помилка при імпорті файлу.'));
+        }
+    };
+
     return (
-        <Container maxWidth="lg" sx={{ mt: 4 }}>
+        <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
             <Breadcrumbs sx={{ mb: 2 }}>
                 <Link component={RouterLink} to="/sites" underline="hover">
                     Сайти
@@ -100,17 +147,44 @@ function SiteLinksPage() {
                 <Typography color="text.primary">{site?.name ?? '...'}</Typography>
             </Breadcrumbs>
 
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: 2,
+                    flexWrap: 'wrap',
+                    mb: 2,
+                }}
+            >
                 <Typography variant="h4">Посилання{site ? `: ${site.name}` : ''}</Typography>
-                <Button
-                    variant="contained"
-                    color="primary"
-                    component={RouterLink}
-                    to={`/sites/${id}/links/new`}
-                    disabled={isDemo}
-                >
-                    Додати посилання
-                </Button>
+                <Stack direction="row" spacing={1}>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".csv,text/csv"
+                        onChange={handleImport}
+                        style={{ display: 'none' }}
+                        data-testid="import-input"
+                    />
+                    <Button
+                        variant="outlined"
+                        startIcon={<UploadFileIcon />}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isDemo}
+                    >
+                        Імпорт CSV
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        component={RouterLink}
+                        to={`/sites/${id}/links/new`}
+                        disabled={isDemo}
+                    >
+                        Додати посилання
+                    </Button>
+                </Stack>
             </Box>
 
             {isDemo && (
@@ -146,6 +220,25 @@ function SiteLinksPage() {
                                                     <ContentCopyIcon fontSize="inherit" />
                                                 </IconButton>
                                             </Tooltip>
+                                            {link.has_password && (
+                                                <Tooltip title="Захищене паролем">
+                                                    <LockIcon fontSize="inherit" color="action" />
+                                                </Tooltip>
+                                            )}
+                                            {link.expires_at && (
+                                                <Tooltip
+                                                    title={
+                                                        isExpired(link)
+                                                            ? `Термін дії минув ${formatDate(link.expires_at)}`
+                                                            : `Діє до ${formatDate(link.expires_at)}`
+                                                    }
+                                                >
+                                                    <ScheduleIcon
+                                                        fontSize="inherit"
+                                                        color={isExpired(link) ? 'error' : 'action'}
+                                                    />
+                                                </Tooltip>
+                                            )}
                                         </Box>
                                     </TableCell>
                                     <TableCell
@@ -175,6 +268,11 @@ function SiteLinksPage() {
                                         )}
                                     </TableCell>
                                     <TableCell align="right">
+                                        <Tooltip title="QR-код">
+                                            <IconButton onClick={() => setQrLink(link)}>
+                                                <QrCode2Icon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
                                         <Tooltip title="Аналітика">
                                             <IconButton component={RouterLink} to={`/links/${link.id}/analytics`}>
                                                 <BarChartIcon fontSize="small" />
@@ -201,6 +299,35 @@ function SiteLinksPage() {
                     </Table>
                 </TableContainer>
             )}
+
+            <Dialog open={qrLink !== null} onClose={() => setQrLink(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>QR-код: /r/{qrLink?.short_code}</DialogTitle>
+                <DialogContent>
+                    {qrLink && (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
+                            <img
+                                src={`${API_URL}/qr/${qrLink.short_code}.svg`}
+                                alt={`QR-код для /r/${qrLink.short_code}`}
+                                width={280}
+                                height={280}
+                            />
+                        </Box>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    {qrLink && (
+                        <Button
+                            component="a"
+                            href={`${API_URL}/qr/${qrLink.short_code}.svg`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            Відкрити SVG
+                        </Button>
+                    )}
+                    <Button onClick={() => setQrLink(null)}>Закрити</Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 }
