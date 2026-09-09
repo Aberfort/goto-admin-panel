@@ -267,7 +267,10 @@ function SiteLinksPage() {
                                             />
                                         )}
                                     </TableCell>
-                                    <TableCell align="right">
+                                    {/* nowrap so the four icons stay on one
+                                        line and the table scrolls sideways
+                                        instead of the row growing tall. */}
+                                    <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                                         <Tooltip title="QR-код">
                                             <IconButton onClick={() => setQrLink(link)}>
                                                 <QrCode2Icon fontSize="small" />
