@@ -41,11 +41,32 @@ Ownership is enforced by [Policies](app/Policies) (`SitePolicy`, `LinkPolicy`), 
 | GET/POST | `/api/sites` | ✓ | |
 | GET/PUT/DELETE | `/api/sites/{site}` | ✓ | |
 | GET/POST | `/api/sites/{site}/links` | ✓ | |
+| POST | `/api/sites/{site}/links/import` | ✓ | CSV upload, see below |
 | GET/PUT/DELETE | `/api/links/{link}` | ✓ | |
 | PATCH | `/api/links/{link}/toggle` | ✓ | flips `is_active` |
 | GET | `/api/sites/{site}/analytics` | ✓ | rolled up across all its links |
 | GET | `/api/links/{link}/analytics` | ✓ | single link |
 | GET | `/r/{code}` | — | the actual redirect (302 + click logging) |
+| POST | `/r/{code}` | — | password gate submit |
+| GET | `/qr/{code}.svg` | — | QR code for the short link |
+
+### Link options
+
+- **Expiry** (`expires_at`): after it passes, `/r/{code}` answers `410 Gone` and logs nothing.
+- **Password** (`password`): visitors get a server-rendered gate first; the click is only recorded once they're through. The hash is never returned by the API — read `has_password` instead. On update, omitting the key leaves the password unchanged; sending it empty removes it.
+- **QR codes** are public and generated on the fly, so they can be embedded directly as `<img src="…/qr/{code}.svg">`.
+
+### CSV import
+
+Expects a header row containing `target_url`, optionally `short_code`:
+
+```csv
+target_url,short_code
+https://example.com/promo,summer-sale
+https://example.com/docs,
+```
+
+Rows are validated individually and capped at 1000 per file — a bad row is skipped and reported back with its line number and reason rather than failing the whole upload. A blank `short_code` is auto-generated.
 
 ## Tests
 

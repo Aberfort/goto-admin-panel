@@ -17,6 +17,9 @@ A self-hosted redirect-link manager with click analytics — group your links by
 - **Click analytics**: every redirect logs a click (timestamp, referrer host, browser/device — parsed locally, no external APIs) and the dashboard shows a 30-day time series plus referrer/browser/device breakdowns.
 - **Privacy by default**: visitor IPs are never stored raw. They're truncated to a /24 (IPv4) or /64 (IPv6) network and HMAC-hashed before being written to the database.
 - **Vanity or auto-generated short codes**: leave the code blank and one is generated; or pick your own.
+- **Expiring and password-protected links**: give a link a deadline (it answers `410 Gone` afterwards) or put a password gate in front of it — the click only counts once the visitor is through.
+- **QR code per link**, generated on the fly and public, so it can be embedded straight into a page or a printout.
+- **CSV import** for moving a batch of links in at once, with per-row errors reported back instead of failing the whole file.
 
 ## Architecture
 
