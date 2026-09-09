@@ -38,9 +38,8 @@ import { useAuth } from '../contexts/useAuth';
 import { getSite } from '../api/sites';
 import { listLinks, deleteLink, toggleLink, importLinks } from '../api/links';
 import { errorMessage } from '../api/errors';
+import { publicBaseUrl } from '../api/client';
 import type { Site, Link as LinkType } from '../types';
-
-const API_URL = import.meta.env.VITE_API_URL || window.location.origin;
 
 function isExpired(link: LinkType): boolean {
     return link.expires_at !== null && new Date(link.expires_at) < new Date();
@@ -81,7 +80,7 @@ function SiteLinksPage() {
 
     const handleCopy = async (shortCode: string) => {
         try {
-            await navigator.clipboard.writeText(`${API_URL}/r/${shortCode}`);
+            await navigator.clipboard.writeText(`${publicBaseUrl}/r/${shortCode}`);
             toast.success('Посилання скопійовано.');
         } catch {
             toast.error('Не вдалося скопіювати посилання.');
@@ -309,7 +308,7 @@ function SiteLinksPage() {
                     {qrLink && (
                         <Box sx={{ display: 'flex', justifyContent: 'center', p: 1 }}>
                             <img
-                                src={`${API_URL}/qr/${qrLink.short_code}.svg`}
+                                src={`${publicBaseUrl}/qr/${qrLink.short_code}.svg`}
                                 alt={`QR-код для /r/${qrLink.short_code}`}
                                 width={280}
                                 height={280}
@@ -321,7 +320,7 @@ function SiteLinksPage() {
                     {qrLink && (
                         <Button
                             component="a"
-                            href={`${API_URL}/qr/${qrLink.short_code}.svg`}
+                            href={`${publicBaseUrl}/qr/${qrLink.short_code}.svg`}
                             target="_blank"
                             rel="noopener noreferrer"
                         >

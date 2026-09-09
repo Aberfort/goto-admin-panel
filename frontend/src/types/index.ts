@@ -31,6 +31,19 @@ export interface Link {
     updated_at: string;
 }
 
+export interface Domain {
+    id: number;
+    site_id: number;
+    host: string;
+    verification_token: string;
+    verified_at: string | null;
+    is_verified: boolean;
+    /** Where the owner must publish the TXT record. */
+    txt_record_name: string;
+    created_at: string;
+    updated_at: string;
+}
+
 export interface ImportResult {
     imported: number;
     skipped: Array<{ row: number; reason: string }>;

@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Site extends Model
 {
@@ -25,5 +26,16 @@ class Site extends Model
     public function links(): HasMany
     {
         return $this->hasMany(Link::class);
+    }
+
+    /**
+     * Not named domain() on purpose: sites.domain is an existing free-text
+     * label column, and an identically named relation would be shadowed by
+     * it. The two should be reconciled when custom domains actually ship
+     * (the label likely stops earning its place then).
+     */
+    public function customDomain(): HasOne
+    {
+        return $this->hasOne(Domain::class);
     }
 }

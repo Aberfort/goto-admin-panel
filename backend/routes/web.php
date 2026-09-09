@@ -19,3 +19,11 @@ Route::post('/r/{code}', [RedirectController::class, 'unlock'])->name('links.unl
 Route::get('/qr/{code}.svg', [QrCodeController::class, 'show'])
     ->middleware('throttle:60,1')
     ->name('links.qr');
+
+// Custom domains: <verified host>/{code}. Registered last so it can't
+// shadow anything above - on the app's own host these one-segment paths
+// find no matching domain and 404, exactly as before.
+Route::get('/{code}', [RedirectController::class, 'goOnDomain'])
+    ->where('code', '[A-Za-z0-9_-]+');
+Route::post('/{code}', [RedirectController::class, 'unlockOnDomain'])
+    ->where('code', '[A-Za-z0-9_-]+');

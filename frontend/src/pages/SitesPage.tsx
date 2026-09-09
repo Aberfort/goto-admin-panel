@@ -28,6 +28,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import LinkIcon from '@mui/icons-material/Link';
 import BarChartIcon from '@mui/icons-material/BarChart';
+import PublicIcon from '@mui/icons-material/Public';
 import { useAuth } from '../contexts/useAuth';
 import { listSites, createSite, updateSite, deleteSite } from '../api/sites';
 import { errorMessage, validationErrors } from '../api/errors';
@@ -164,6 +165,11 @@ function SitesPage() {
                                         <Tooltip title="Аналітика">
                                             <IconButton component={RouterLink} to={`/sites/${site.id}/analytics`}>
                                                 <BarChartIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                        <Tooltip title="Власний домен">
+                                            <IconButton component={RouterLink} to={`/sites/${site.id}/domain`}>
+                                                <PublicIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Редагувати">

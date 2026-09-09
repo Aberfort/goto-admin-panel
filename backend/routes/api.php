@@ -3,6 +3,7 @@
 use App\Http\Controllers\AnalyticsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ConfigController;
+use App\Http\Controllers\DomainController;
 use App\Http\Controllers\LinkController;
 use App\Http\Controllers\SiteController;
 use Illuminate\Support\Facades\Route;
@@ -19,6 +20,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::apiResource('sites', SiteController::class);
     Route::post('/sites/{site}/links/import', [LinkController::class, 'import']);
+
+    Route::get('/sites/{site}/domain', [DomainController::class, 'show']);
+    Route::post('/sites/{site}/domain', [DomainController::class, 'store']);
+    Route::post('/domains/{domain}/verify', [DomainController::class, 'verify']);
+    Route::delete('/domains/{domain}', [DomainController::class, 'destroy']);
+
     Route::apiResource('sites.links', LinkController::class)->shallow();
     Route::patch('/links/{link}/toggle', [LinkController::class, 'toggle']);
 
